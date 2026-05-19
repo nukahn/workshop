@@ -117,7 +117,7 @@ const SAMPLE_FINAL={
 function getAllIdeas(){const real=Object.entries(ideas).map(([k,v])=>({key:k,...v}));return real.length>0?real:SAMPLE_IDEAS;}
 function getEvalArr(){const real=Object.values(evals);return real.length>0?real:SAMPLE_EVALS;}
 function getAvgScore(key){const sc=getEvalArr().filter(e=>e.ideaKey===key).map(e=>e.total);return sc.length?sc.reduce((a,b)=>a+b,0)/sc.length:null;}
-function getGrade(avg){if(avg===null)return'';if(avg>=17)return'⭐ 최우선';if(avg>=13)return'✅ 추진 권장';if(avg>=9)return'🔄 추가 검토';return'⏸ 보류';}
+function getGrade(avg){return'';}
 function getMyEval(ideaKey){if(!currentUser)return null;const found=Object.entries(evals).find(([,v])=>v.ideaKey===ideaKey&&v.name===currentUser.name&&v.group===currentUser.group);return found||null;}
 
 const COLORS=['#4f8ef7','#6ee7b7','#f59e0b','#f87171','#a78bfa','#fb923c','#67e8f9'];
@@ -523,11 +523,11 @@ function renderDashPanel(){
   const ranked=arr.filter(i=>!i.isSample).map(idea=>{const avg=getAvgScore(idea.key);const cnt=ea.filter(e=>e.ideaKey===idea.key).length;return{idea,avg,cnt};}).filter(x=>x.cnt>0).sort((a,b)=>b.avg-a.avg);
   const rel=document.getElementById('dash-ranking');
   if(!ranked.length){rel.innerHTML='<div class="empty-msg">평가 데이터가 없습니다.</div>';return;}
-  rel.innerHTML=`<table class="rank-table"><tr><th>#</th><th>아이디어</th><th>조</th><th>제안자</th><th>평균</th><th>평가</th><th>판정</th></tr>
+  rel.innerHTML=`<table class="rank-table"><tr><th>#</th><th>아이디어</th><th>조</th><th>제안자</th><th>평균</th><th>평가</th></tr>
     ${ranked.map(({idea,avg,cnt},i)=>`<tr><td><span class="rank-num${i<3?' top3':''}">${i+1}</span></td>
       <td style="font-weight:500">${idea.title}</td><td>${idea.group}</td><td>${idea.name}</td>
       <td style="font-weight:700;color:var(--accent3)">${avg.toFixed(1)}</td>
-      <td style="color:var(--text2)">${cnt}명</td><td>${getGrade(avg)}</td></tr>`).join('')}</table>`;
+      <td style="color:var(--text2)">${cnt}명</td></tr>`).join('')}</table>`;
 }
 
 // ━━━ 평가 렌더 ━━━
@@ -608,7 +608,6 @@ window.renderEval=function(){
         </div>`).join('')}</div>
       <div class="eval-total-row">
         <div><div class="eval-total-num" id="et-${idea.key}">${total||0}</div><div class="eval-total-label">/ 20점</div></div>
-        <div class="eval-total-grade" id="eg-${idea.key}">${total>=4?getGrade(total):''}</div>
       </div>
       <button class="eval-submit-btn" id="eval-submit-${idea.key}" onclick="submitEval('${idea.key}')">
         ${isEdit?'✏️ 평가 수정하기 →':'평가 제출하기 →'}
@@ -625,7 +624,6 @@ window.setEvalScore=function(ideaKey,cKey,val,el){
   el.classList.add('sel');
   const total=Object.values(window._es[ideaKey]).reduce((a,b)=>a+(b||0),0);
   const te=document.getElementById('et-'+ideaKey);if(te)te.textContent=total;
-  const ge=document.getElementById('eg-'+ideaKey);if(ge)ge.textContent=total>=4?getGrade(total):'';
 };
 
 // ━━━ 발표 ━━━
@@ -667,7 +665,7 @@ function _renderPresentList(arrSorted, rankMap){
       </div>
       <div class="present-idea-right">
         ${avg!==null
-          ?`<span class="present-score">${avg}점</span><span class="present-rank${rank<=3?' top':''}">🏆 ${rank}위</span><span class="present-grade">${getGrade(r.avg)}</span>`
+          ?`<span class="present-score">${avg}점</span><span class="present-rank${rank<=3?' top':''}">🏆 ${rank}위</span>`
           :'<span class="present-no-score">평가 없음</span>'}
       </div>
     </div>`;
@@ -686,7 +684,7 @@ window.loadPresent=function(){
   const _rkl=getAllIdeas().filter(i=>!i.isSample).map(idea2=>{const avg=getAvgScore(idea2.key);const cnt=getEvalArr().filter(e=>e.ideaKey===idea2.key).length;return{key:idea2.key,avg,cnt};}).filter(x=>x.cnt>0).sort((a,b)=>b.avg-a.avg);
   const _ril=_rkl.findIndex(r=>r.key===key);
   const scoreEl=document.getElementById('ps-score-badge');
-  if(scoreEl){if(_ril>=0){scoreEl.style.display='flex';scoreEl.innerHTML=`<span class="ps-score-num">${_rkl[_ril].avg.toFixed(1)}점</span><span class="ps-rank${_ril<3?' top':''}">🏆 ${_ril+1}위</span><span class="ps-grade">${getGrade(_rkl[_ril].avg)}</span><span class="ps-eval-cnt">${_rkl[_ril].cnt}명 평가</span>`;}else{scoreEl.style.display='none';}}
+  if(scoreEl){if(_ril>=0){scoreEl.style.display='flex';scoreEl.innerHTML=`<span class="ps-score-num">${_rkl[_ril].avg.toFixed(1)}점</span><span class="ps-rank${_ril<3?' top':''}">🏆 ${_ril+1}위</span><span class="ps-eval-cnt">${_rkl[_ril].cnt}명 평가</span>`;}else{scoreEl.style.display='none';}}
   document.getElementById('ps-target').value=idea.target||'';
   document.getElementById('ps-problem').value=idea.problem||'';
   document.getElementById('ps-why').value=idea.reason||'';
@@ -928,10 +926,9 @@ window.renderFinal=function(){
     const avg=p.ideaKey?getAvgScore(p.ideaKey):null;
     const evalCnt=p.ideaKey?getEvalArr().filter(e=>e.ideaKey===p.ideaKey).length:0;
     const rank=p.ideaKey?ranked.findIndex(r=>r.key===p.ideaKey)+1:0;
-    const grade=avg!==null?getGrade(avg):'';
     const canEdit=!p.isSample&&(currentUser.isAdmin||p.group===currentUser.group);
     const updatedStr=p.updatedAt?`수정 ${new Date(p.updatedAt).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}`:''
-    const scoreHtml=avg!==null?`<div class="final-score-row"><div class="final-score-block"><div class="final-score-num">${avg.toFixed(1)}</div><div class="final-score-sub">/ 20점 (${evalCnt}명 평가)</div></div>${rank>0?`<div class="final-rank-block"><span class="final-rank-num${rank<=3?' top':''}">🏆 ${rank}위</span></div>`:''}<div class="final-grade">${grade}</div><div class="final-criteria-row">${CRITERIA.map(c=>{const vs=getEvalArr().filter(e=>e.ideaKey===p.ideaKey).map(e=>e.scores?.[c.key]||0).filter(v=>v>0);const ca=vs.length?(vs.reduce((a,b)=>a+b,0)/vs.length).toFixed(1):'-';return`<div class="final-criterion"><div class="final-criterion-label">${c.label}</div><div class="final-criterion-val">${ca}</div></div>`;}).join('')}</div></div>`:'';
+    const scoreHtml=avg!==null?`<div class="final-score-row"><div class="final-score-block"><div class="final-score-num">${avg.toFixed(1)}</div><div class="final-score-sub">/ 20점 (${evalCnt}명 평가)</div></div>${rank>0?`<div class="final-rank-block"><span class="final-rank-num${rank<=3?' top':''}">🏆 ${rank}위</span></div>`:''}<div class="final-criteria-row">${CRITERIA.map(c=>{const vs=getEvalArr().filter(e=>e.ideaKey===p.ideaKey).map(e=>e.scores?.[c.key]||0).filter(v=>v>0);const ca=vs.length?(vs.reduce((a,b)=>a+b,0)/vs.length).toFixed(1):'-';return`<div class="final-criterion"><div class="final-criterion-label">${c.label}</div><div class="final-criterion-val">${ca}</div></div>`;}).join('')}</div></div>`:'';
     return`<div class="final-card" id="final-card-${p._key}">
       <div class="final-card-header">
         <div class="final-card-header-top">
@@ -970,6 +967,44 @@ window.renderFinal=function(){
       : '';
     return multiHeader + cards.map((p,i)=>renderCard(p, i)).join('');
   }).join('');
+};
+window.downloadCSV = function() {
+  const allIdeas = getAllIdeas().filter(i => !i.isSample);
+  if (!allIdeas.length) { alert('다운로드할 데이터가 없습니다.'); return; }
+  
+  const headers = [
+    '조', '제안자', '논의 주제', '제목', 
+    '타겟', '문제점', '해결책', '근거',
+    '핵심 아이디어 요약', '기대 효과', '실행 난이도 & 기간', '필요 투자/비용', '주요 리스크', '제안 실행 조직',
+    '우리회사가 해야 하는 이유(전략적 당위성)', '시장/경쟁 환경', '성공을 위한 핵심 지표/기능',
+    '평균 점수', '평가 참여 수'
+  ];
+  
+  const rows = allIdeas.map(idea => {
+    const final = Object.values(finalPresentations).find(p => p.ideaKey === idea.key) || {};
+    const avg = getAvgScore(idea.key);
+    const evalCnt = getEvalArr().filter(e => e.ideaKey === idea.key).length;
+    const topic = TOPICS.find(t => t.id === idea.topicId);
+    
+    return [
+      idea.group, idea.name, topic ? topic.title : (idea.topicTitle || ''), idea.title,
+      idea.target || '', idea.problem || '', idea.solution || '', idea.reason || '',
+      final.summary || '', final.effect || '', final.effort || '', final.cost || '', final.risk || '', final.org || '',
+      final.why || idea.reason || '', final.market || '', final.condition || '',
+      avg !== null ? avg.toFixed(1) : '0', evalCnt
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+  });
+  
+  const csvContent = "\ufeff" + headers.join(',') + '\n' + rows.join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `워크샵_아이디어_전체현황_${new Date().toISOString().slice(0,10)}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 window.clearAllData=async function(){
   if(!confirm('⚠️ 모든 데이터를 삭제합니다.'))return;
@@ -1081,7 +1116,7 @@ select option{background:var(--surface2);}
 .next-topic-btn{margin-top:10px;padding:11px 22px;background:var(--accent2);border:none;border-radius:var(--radius-sm);color:#0a1f17;font-size:18px;font-weight:700;font-family:inherit;cursor:pointer;width:100%;display:none;}
 
 /* 현황 */
-.dash-wrap{padding:24px 20px;max-width:1100px;margin:0 auto;overflow-x:hidden;}
+.dash-wrap{padding:24px 20px 100px;max-width:1100px;margin:0 auto;overflow-x:hidden;}
 .view-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border);}
 .view-tab{padding:6px 14px;border-radius:20px;font-size:16px;font-weight:500;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s;}
 .view-tab:hover{border-color:var(--accent);color:var(--accent);}
@@ -1479,7 +1514,7 @@ select option{background:var(--surface2);}
     </div>
     <button class="login-btn" onclick="doLogin()">입장하기 →</button>
     <div style="text-align:center; margin-top:10px; font-size:11px; color:#999;">
-      Build: 2026-05-14-v6 (Proxy: Vercel, Model: claude-haiku-4-5-20251001)
+      Build: 2026-05-19-v7 (Proxy: Vercel, Model: claude-haiku-4-5-20251001)
     </div>
   </div>
 </div>
@@ -1716,6 +1751,7 @@ select option{background:var(--surface2);}
     <span class="admin-label">클러스터링·발표문 AI 기능은 운영자만 사용</span>
     <span class="admin-spacer"></span>
     <button class="admin-btn" onclick="renderView()">현황 새로고침</button>
+    <button class="admin-btn" style="background:var(--accent2);color:#0a1f17;border:none;" onclick="downloadCSV()">📥 CSV 다운로드</button>
     <button class="admin-btn danger" onclick="clearAllData()">데이터 전체 삭제</button>
   </div>
 </div>
