@@ -497,8 +497,12 @@ function renderDashPanel(){
             <span class="cluster-group-name" style="color:${COLORS[gi]}">${g}</span>
             <span class="cluster-group-cnt">${byG[g].length}개</span>
           </div>
-          <div class="cluster-group-ideas">${byG[g].map(idea=>{const avg=getAvgScore(idea.key);return`<div class="cluster-idea-row">
+          <div class="cluster-group-ideas">${byG[g].map(idea=>{
+            const avg=getAvgScore(idea.key);
+            const topic = TOPICS.find(t => t.id === idea.topicId);
+            return`<div class="cluster-idea-row">
             ${idea.isSample?'<span class="sample-pill">샘플</span>':''}
+            ${topic ? `<span class="badge" style="font-size:10px; padding:2px 6px; margin-right:4px; border:1px solid ${topic.color}; color:${topic.color}">${topic.id}</span>` : ''}
             <span class="ci-title">${idea.title}</span><span class="ci-meta">${idea.name}</span>
             ${avg!==null?`<span class="ci-score">${avg.toFixed(1)}점</span>`:''}</div>`;}).join('')}</div>
         </div>`).join('');
@@ -513,8 +517,12 @@ function renderDashPanel(){
             <span class="cluster-group-desc">${cl.desc||''}</span>
             <span class="cluster-group-cnt">${cli.length}개</span>
           </div>
-          <div class="cluster-group-ideas">${cli.map(idea=>{const avg=getAvgScore(idea.key);return`<div class="cluster-idea-row">
+          <div class="cluster-group-ideas">${cli.map(idea=>{
+            const avg=getAvgScore(idea.key);
+            const topic = TOPICS.find(t => t.id === idea.topicId);
+            return`<div class="cluster-idea-row">
             ${idea.isSample?'<span class="sample-pill">샘플</span>':''}
+            ${topic ? `<span class="badge" style="font-size:10px; padding:2px 6px; margin-right:4px; border:1px solid ${topic.color}; color:${topic.color}">${topic.id}</span>` : ''}
             <span class="ci-title">${idea.title}</span><span class="ci-meta">${idea.group}·${idea.name}</span>
             ${avg!==null?`<span class="ci-score">${avg.toFixed(1)}점</span>`:''}</div>`;}).join('')}</div>
         </div>`;
