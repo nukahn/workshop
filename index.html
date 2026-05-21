@@ -83,6 +83,7 @@ async function callClaude(prompt, maxTokens=1500) {
 let currentUser=null; window._currentUser=()=>currentUser;
 let ideas={},evals={},clusters=null,finalPresentations={},presentDrafts={};
 let _presentKey=null,_draftListener=null,_isSaving=false;
+let timerSec=300,timerInt;
 
 // 주제 선택 상태
 let selectedTopics=[];    // 선택된 topic id 배열
@@ -164,7 +165,7 @@ window.doLogin=function(){
   const numInfo=document.getElementById('num-info');
   if(numInfo) numInfo.innerHTML=`<strong>${currentUser.name}</strong><span>${currentUser.group}</span>`;
   applyRoleUI();
-  go('form');
+  window.go('form');
   renderTopicCards();
 };
 window.togglePwField=function(){
@@ -687,6 +688,8 @@ window.loadPresent=function(){
   const key=document.getElementById('present-selector').value;
   const idea=ideas[key];const cont=document.getElementById('present-content');
   if(!idea){cont.style.display='none';_detachDraftListener();return;}
+  _editingFinalKey=null;
+  _updateSubmitBadge(false);
   _presentKey=key;cont.style.display='block';
   document.getElementById('ps-title').textContent=idea.title;
   const _rkl=getAllIdeas().filter(i=>!i.isSample).map(idea2=>{const avg=getAvgScore(idea2.key);const cnt=getEvalArr().filter(e=>e.ideaKey===idea2.key).length;return{key:idea2.key,avg,cnt};}).filter(x=>x.cnt>0).sort((a,b)=>b.avg-a.avg);
@@ -709,8 +712,12 @@ function _attachDraftListener(key,idea){
     const draft=snap.val();const syncEl=document.getElementById('collab-status');
     if(!draft){if(syncEl)syncEl.textContent='✏️ 새 초안 — 작성을 시작하세요';return;}
     if(_isSaving)return;
-    const fields=['ps-summary','ps-effect','ps-effort','ps-cost','ps-risk','ps-org','ps-market','ps-condition'];
-    fields.forEach(id=>{const el=document.getElementById(id);if(el&&document.activeElement!==el){el.value=draft[id.replace('ps-','')]||'';}});
+    const defaults={target:idea.target||'',problem:idea.problem||'',why:idea.reason||''};
+    const fields=['summary','target','problem','effect','effort','cost','risk','org','why','market','condition'];
+    fields.forEach(field=>{
+      const el=document.getElementById('ps-'+field);
+      if(el&&document.activeElement!==el){el.value=draft[field]??defaults[field]??'';}
+    });
     const speechOut=document.getElementById('ai-msg-output');
     if(draft.speech&&speechOut){speechOut.style.display='block';speechOut.textContent=draft.speech;}
     if(syncEl){const t=draft.updatedAt?new Date(draft.updatedAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'';syncEl.textContent=`✅ ${draft.updatedBy||''}님이 ${t} 저장`;}
@@ -723,7 +730,7 @@ window.onDraftChange=async function(){
   _saveTimer=setTimeout(async()=>{
     _isSaving=true;const d=window.getPresentData();const speechEl=document.getElementById('ai-msg-output');
     try{
-      await set(ref(db,'presentDrafts/'+_presentKey),{summary:d.summary,effect:d.effect,effort:d.effort,cost:d.cost,risk:d.risk,org:d.org,why:d.why,market:d.market,condition:d.condition,speech:speechEl?speechEl.textContent:'',updatedBy:currentUser.name,updatedAt:new Date().toISOString()});
+      await set(ref(db,'presentDrafts/'+_presentKey),{summary:d.summary,target:d.target,problem:d.problem,effect:d.effect,effort:d.effort,cost:d.cost,risk:d.risk,org:d.org,why:d.why,market:d.market,condition:d.condition,speech:speechEl?speechEl.textContent:'',updatedBy:currentUser.name,updatedAt:new Date().toISOString()});
       if(syncEl)syncEl.textContent=`✅ ${currentUser.name}님이 방금 저장`;
     }catch(e){if(syncEl)syncEl.textContent='❌ 저장 실패';}
     setTimeout(()=>{_isSaving=false;},500);
@@ -737,7 +744,7 @@ let _editingFinalKey = null;
 
 window.submitFinalPresentation=async function(){
   const d=window.getPresentData();
-  if(!d.title||d.title==='아이디어명'){alert('발표할 아이디어를 먼저 선택해주세요.');return;}
+  if(!d.title||d.title==='아이디어명'){alert('발표할 아이디어를 먼저 선택해주세요.');return false;}
   const ideaKey=document.getElementById('present-selector').value;
   const isEdit = !!_editingFinalKey;
   const payload={
@@ -755,7 +762,7 @@ window.submitFinalPresentation=async function(){
   const confirmMsg = isEdit
     ? `[${payload.group}] "${payload.title}" 수정 내용을 저장하시겠습니까?`
     : `[${payload.group}] "${payload.title}"${_scoreStr}\n을 최종 발표자료로 제출하시겠습니까?`;
-  if(!confirm(confirmMsg))return;
+  if(!confirm(confirmMsg))return false;
   const btn=document.getElementById('final-submit-btn');btn.disabled=true;btn.textContent='저장 중...';
   try{
     // 신규: push로 고유 키 생성 / 수정: 기존 키로 set
@@ -776,20 +783,21 @@ window.submitFinalPresentation=async function(){
       _updateSubmitBadge(true);
     }, 1500);
     // 제출 완료 — submitAndGoFinal에서 ⑤탭으로 이동
+    return true;
   }
-  catch(e){alert('저장 실패: '+e.message);btn.disabled=false;btn.textContent=isEdit?'💾 수정 저장하기 →':'📋 최종 자료 제출하기 →';}
+  catch(e){alert('저장 실패: '+e.message);btn.disabled=false;btn.textContent=isEdit?'💾 수정 저장하기 →':'📋 최종 자료 제출하기 →';return false;}
 };
 
 function _updateSubmitBadge(submitted){
   const badge = document.getElementById('submit-status-badge');
   const btn = document.getElementById('final-submit-btn');
-  if(!badge||!btn) return;
+  if(!btn) return;
   if(submitted){
-    badge.style.display='flex';
+    if(badge)badge.style.display='flex';
     btn.textContent='💾 수정 저장하기 →';
     btn.style.background='linear-gradient(135deg,#f59e0b,#d97706)';
   } else {
-    badge.style.display='none';
+    if(badge)badge.style.display='none';
     btn.textContent='📋 최종 자료 제출하기 →';
     btn.style.background='';
   }
@@ -898,9 +906,8 @@ window.saveFinalEdit=async function(docKey){
 
 // ④ 탭 진입 시 수정 상태 초기화 (새 자료 작성)
 window.submitAndGoFinal=async function(){
-  await window.submitFinalPresentation();
-  // 제출 성공 시 ⑤탭으로 이동 (약간 딜레이 후)
-  setTimeout(()=>{ go('final'); }, 400);
+  const saved=await window.submitFinalPresentation();
+  if(saved)setTimeout(()=>{ window.go('final'); }, 400);
 };
 
 window.resetPresentForm=function(){
@@ -1019,6 +1026,85 @@ window.clearAllData=async function(){
   await Promise.all([remove(ref(db,'ideas')),remove(ref(db,'evals')),remove(ref(db,'clusters')),remove(ref(db,'finalPresentations'))]);
   alert('삭제 완료');
 };
+
+window._tv={target:null,reason:null};
+window.pickTag=function(el,group){
+  el.closest('.tag-select').querySelectorAll('.tag').forEach(t=>t.classList.remove('selected'));
+  el.classList.add('selected');
+  window._tv[group]=el.textContent;
+  if(group==='target')document.getElementById('f-target').value=el.textContent;
+  if(activeTopicId){
+    if(!topicFormData[activeTopicId])topicFormData[activeTopicId]={};
+    topicFormData[activeTopicId][group+'Tag']=el.textContent;
+    if(group==='target')topicFormData[activeTopicId].target=el.textContent;
+  }
+};
+
+window.toggleUserMenu=function(e){
+  if(e) e.stopPropagation();
+  const menu=document.getElementById('nav-user-menu');
+  if(!menu) return;
+  const isOpen = menu.style.display!=='none';
+  menu.style.display = isOpen ? 'none' : 'block';
+  if(!isOpen){
+    setTimeout(()=>{
+      document.addEventListener('click', function handler(e2){
+        if(!document.getElementById('nav-user-wrap')?.contains(e2.target)){
+          menu.style.display='none';
+          document.removeEventListener('click', handler);
+        }
+      });
+    }, 10);
+  }
+};
+
+window.goRelogin=function(e){
+  if(e) e.stopPropagation();
+  const menu=document.getElementById('nav-user-menu');
+  if(menu) menu.style.display='none';
+  const cu = window._currentUser ? window._currentUser() : null;
+  if(cu){
+    const nameEl=document.getElementById('login-name');
+    if(nameEl) nameEl.value=cu.name;
+    const roleEl=document.getElementById('login-role');
+    if(roleEl){
+      roleEl.value=cu.isAdmin?'admin':'user';
+      window.togglePwField();
+    }
+    if(!cu.isAdmin){
+      const groupEl=document.getElementById('login-group');
+      if(groupEl) groupEl.value=cu.group;
+    }
+  }
+  document.getElementById('app-shell').style.display='none';
+  document.getElementById('screen-login').style.display='flex';
+};
+
+window.go=function(screen){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  const order=['form','view','eval','present','final'];
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>{if(order[i]===screen)b.classList.add('active');});
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+screen).classList.add('active');
+  if(screen==='view')window.renderView?.();
+  if(screen==='eval')window.renderEval?.();
+  if(screen==='present'){
+    window.renderPresentSelector?.();
+    window.resetPresentForm?.();
+  }
+  if(screen==='final')window.renderFinal?.();
+};
+
+function startTimer(){
+  clearInterval(timerInt);
+  timerInt=setInterval(()=>{
+    timerSec=Math.max(0,timerSec-1);
+    const m=String(Math.floor(timerSec/60)).padStart(2,'0'),s=String(timerSec%60).padStart(2,'0');
+    const el=document.getElementById('timer');if(el)el.textContent=m+':'+s;
+    if(timerSec===0)clearInterval(timerInt);
+  },1000);
+}
+startTimer();
 </script>
 
 <style>
@@ -1522,7 +1608,7 @@ select option{background:var(--surface2);}
     </div>
     <button class="login-btn" onclick="doLogin()">입장하기 →</button>
     <div style="text-align:center; margin-top:10px; font-size:11px; color:#999;">
-      Build: 2026-05-20-v1 (Proxy: Vercel, Model: claude-haiku-4-5-20251001)
+      Build: 2026-05-21-v1 (Proxy: Vercel, Model: claude-haiku-4-5-20251001)
     </div>
   </div>
 </div>
@@ -1700,8 +1786,8 @@ select option{background:var(--surface2);}
           <div class="ps-score-badge" id="ps-score-badge" style="display:none;"></div>
           <div class="biz-grid">
             <div class="biz-field full"><label>💡 핵심 아이디어 요약</label><textarea id="ps-summary" rows="2" placeholder="한 문단으로 이 아이디어의 핵심을 정리" oninput="onDraftChange()"></textarea></div>
-            <div class="biz-field"><label>🎯 타겟 고객</label><input type="text" id="ps-target"></div>
-            <div class="biz-field"><label>🔥 해결하는 고객 문제</label><textarea id="ps-problem" rows="2"></textarea></div>
+            <div class="biz-field"><label>🎯 타겟 고객</label><input type="text" id="ps-target" oninput="onDraftChange()"></div>
+            <div class="biz-field"><label>🔥 해결하는 고객 문제</label><textarea id="ps-problem" rows="2" oninput="onDraftChange()"></textarea></div>
           </div>
         </div>
         <div class="slide">
@@ -1764,83 +1850,5 @@ select option{background:var(--surface2);}
   </div>
 </div>
 
-<script>
-window._tv={target:null,reason:null};
-window.pickTag=function(el,group){
-  el.closest('.tag-select').querySelectorAll('.tag').forEach(t=>t.classList.remove('selected'));
-  el.classList.add('selected');
-  window._tv[group]=el.textContent;
-  if(group==='target')document.getElementById('f-target').value=el.textContent;
-  // topicFormData에도 저장
-  if(activeTopicId){
-    if(!topicFormData[activeTopicId])topicFormData[activeTopicId]={};
-    topicFormData[activeTopicId][group+'Tag']=el.textContent;
-    if(group==='target')topicFormData[activeTopicId].target=el.textContent;
-  }
-};
-window.toggleUserMenu=function(e){
-  if(e) e.stopPropagation();
-  const menu=document.getElementById('nav-user-menu');
-  if(!menu) return;
-  const isOpen = menu.style.display!=='none';
-  menu.style.display = isOpen ? 'none' : 'block';
-  if(!isOpen){
-    setTimeout(()=>{
-      document.addEventListener('click', function handler(e2){
-        if(!document.getElementById('nav-user-wrap')?.contains(e2.target)){
-          menu.style.display='none';
-          document.removeEventListener('click', handler);
-        }
-      });
-    }, 10);
-  }
-};
-
-window.goRelogin=function(e){
-  if(e) e.stopPropagation();
-  const menu=document.getElementById('nav-user-menu');
-  if(menu) menu.style.display='none';
-  const cu = window._currentUser ? window._currentUser() : null;
-  if(cu){
-    const nameEl=document.getElementById('login-name');
-    if(nameEl) nameEl.value=cu.name;
-    const roleEl=document.getElementById('login-role');
-    if(roleEl){
-      roleEl.value=cu.isAdmin?'admin':'user';
-      window.togglePwField();
-    }
-    if(!cu.isAdmin){
-      const groupEl=document.getElementById('login-group');
-      if(groupEl) groupEl.value=cu.group;
-    }
-  }
-  document.getElementById('app-shell').style.display='none';
-  document.getElementById('screen-login').style.display='flex';
-};
-
-window.go=function(screen){
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  const order=['form','view','eval','present','final'];
-  document.querySelectorAll('.nav-btn').forEach((b,i)=>{if(order[i]===screen)b.classList.add('active');});
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('screen-'+screen).classList.add('active');
-  if(screen==='view')window.renderView?.();
-  if(screen==='eval')window.renderEval?.();
-  if(screen==='present'){window.renderPresentSelector?.();if(!_editingFinalKey)window.resetPresentForm?.();}
-  if(screen==='final')window.renderFinal?.();
-};
-let timerSec=300,timerInt;
-function startTimer(){
-  clearInterval(timerInt);
-  timerInt=setInterval(()=>{
-    timerSec=Math.max(0,timerSec-1);
-    const m=String(Math.floor(timerSec/60)).padStart(2,'0'),s=String(timerSec%60).padStart(2,'0');
-    const el=document.getElementById('timer');if(el)el.textContent=m+':'+s;
-    if(timerSec===0)clearInterval(timerInt);
-  },1000);
-}
-startTimer();
-// 주제 카드는 doLogin() 완료 후 renderTopicCards() 호출로 렌더됨
-</script>
 </body>
 </html>
