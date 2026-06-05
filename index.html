@@ -98,7 +98,7 @@ async function callClaude(prompt, maxTokens=1500) {
 let currentUser=null; window._currentUser=()=>currentUser;
 let ideas={},evals={},clusters=null,finalPresentations={},presentDrafts={};
 let _presentKey=null,_draftListener=null,_isSaving=false;
-let timerSec=300,timerInt;
+let timerSec=1200,timerInt;
 
 // 주제 선택 상태
 let selectedTopics=[];    // 선택된 topic id 배열
@@ -341,7 +341,7 @@ window.submitIdea=async function(){
 window.resetForm=function(){
   if(activeTopicId)topicFormData[activeTopicId]={title:'',problem:'',solution:'',reason:'',target:'',targetTag:null,reasonTag:null};
   renderFormSection();
-  timerSec=300;startTimer();
+  timerSec=1200;startTimer();
 };
 
 // ━━━ 평가 제출/수정 ━━━
@@ -1653,7 +1653,7 @@ select option{background:var(--surface2);}
         <div class="timer-bar">
           <span style="font-size:16px">⏱</span>
           <span style="font-size:13px;color:var(--text2)">권장 작성 시간</span>
-          <span class="timer-count" id="timer">05:00</span>
+          <span class="timer-count" id="timer">20:00</span>
         </div>
       </div>
 
