@@ -622,7 +622,6 @@ window.renderEval=function(){
       ${topicInfo?`<div class="idea-topic-badge" style="color:${topicInfo.color};border-color:${topicInfo.color}44;background:${topicInfo.color}10;margin-bottom:8px;">논의 주제 ${topicInfo.id.replace('T','')} · ${topicInfo.title}</div>`:''}
       <div class="eval-card-title">${idea.title}</div>
       <div class="eval-card-sub">${idea.group} · ${idea.name}${idea.target?' · '+idea.target:''}</div>
-      ${isEdit?'<div class="eval-edit-badge">✏️ 수정 모드 — 이미 평가한 아이디어입니다</div>':''}
       <div class="criteria-grid">${CRITERIA.map(c=>`
         <div class="criteria-item"><label>${c.label}</label><div class="hint">${c.hint}</div>
           <div class="score-input-row">${[1,2,3,4,5].map(n=>`<div class="score-btn${sc[c.key]===n?' sel':''}" onclick="setEvalScore('${idea.key}','${c.key}',${n},this)">${n}</div>`).join('')}</div>
