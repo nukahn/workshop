@@ -851,7 +851,7 @@ window.editFinalPresentation=function(docKey){
       <div class="iep-field"><label>⚡ 실행 계획</label><textarea id="iep-effort-${docKey}" rows="3">${p.effort||''}</textarea></div>
       <div class="iep-field"><label>💰 예상 비용</label><textarea id="iep-cost-${docKey}" rows="2">${p.cost||''}</textarea></div>
       <div class="iep-field"><label>⚠️ 주요 리스크</label><textarea id="iep-risk-${docKey}" rows="2">${p.risk||''}</textarea></div>
-      <div class="iep-field full"><label>🏢 제안 실행 조직</label><textarea id="iep-org-${docKey}" rows="2">${p.org||''}</textarea></div>
+      <div class="iep-field full"><label>🏢 유관 조직</label><textarea id="iep-org-${docKey}" rows="2">${p.org||''}</textarea></div>
       <div class="iep-field"><label>🚀 전략적 당위성</label><textarea id="iep-why-${docKey}" rows="3">${p.why||''}</textarea></div>
       <div class="iep-field"><label>🌐 시장 환경</label><textarea id="iep-market-${docKey}" rows="3">${p.market||''}</textarea></div>
       <div class="iep-field full"><label>✅ 성공 핵심 조건</label><textarea id="iep-condition-${docKey}" rows="2">${p.condition||''}</textarea></div>
@@ -976,7 +976,7 @@ window.renderFinal=function(){
           ${p.effort?`<div class="final-field"><div class="final-label">⚡ 실행 계획</div><div class="final-value">${p.effort}</div></div>`:''}
           ${p.cost?`<div class="final-field"><div class="final-label">💰 예상 비용</div><div class="final-value">${p.cost}</div></div>`:''}
           ${p.risk?`<div class="final-field"><div class="final-label">⚠️ 주요 리스크</div><div class="final-value">${p.risk}</div></div>`:''}
-          ${p.org?`<div class="final-field full"><div class="final-label">🏢 제안 실행 조직</div><div class="final-value">${p.org}</div></div>`:''}
+          ${p.org?`<div class="final-field full"><div class="final-label">🏢 유관 조직</div><div class="final-value">${p.org}</div></div>`:''}
           ${p.why?`<div class="final-field"><div class="final-label">🚀 전략적 당위성</div><div class="final-value">${p.why}</div></div>`:''}
           ${p.market?`<div class="final-field"><div class="final-label">🌐 시장 환경</div><div class="final-value">${p.market}</div></div>`:''}
           ${p.condition?`<div class="final-field full"><div class="final-label">✅ 성공 핵심 조건</div><div class="final-value">${p.condition}</div></div>`:''}
@@ -1001,7 +1001,7 @@ window.downloadCSV = function() {
   const headers = [
     '조', '제안자', '논의 주제', '제목', 
     '타겟', '문제점', '해결책', '근거',
-    '핵심 아이디어 요약', '기대 효과', '실행 난이도 & 기간', '필요 투자/비용', '주요 리스크', '제안 실행 조직',
+    '핵심 아이디어 요약', '기대 효과', '실행 난이도 & 기간', '필요 투자/비용', '주요 리스크', '유관 조직',
     '우리회사가 해야 하는 이유(전략적 당위성)', '시장/경쟁 환경', '성공을 위한 핵심 지표/기능',
     '평균 점수', '평가 참여 수'
   ];
@@ -1809,7 +1809,7 @@ select option{background:var(--surface2);}
             <div class="biz-field"><label>⚡ 실행 난이도 & 기간</label><textarea id="ps-effort" rows="3" placeholder="예) 개발 3개월, 외부 API 연동 필요" oninput="onDraftChange()"></textarea></div>
             <div class="biz-field"><label>💰 필요 투자 / 비용</label><textarea id="ps-cost" rows="2" oninput="onDraftChange()"></textarea></div>
             <div class="biz-field"><label>⚠️ 주요 리스크</label><textarea id="ps-risk" rows="2" oninput="onDraftChange()"></textarea></div>
-            <div class="biz-field full"><label>🏢 제안 실행 조직</label><textarea id="ps-org" rows="2" oninput="onDraftChange()"></textarea></div>
+            <div class="biz-field full"><label>🏢 유관 조직</label><textarea id="ps-org" rows="2" oninput="onDraftChange()"></textarea></div>
           </div>
         </div>
         <div class="slide">
