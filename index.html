@@ -9,19 +9,34 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, push, set, onValue, remove }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getAuth, signInAnonymously, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const firebaseConfig = {
-  apiKey:"AIzaSyAUzKmUJTJbOPEVzdC2woy3OQ8bwsVgqyc",
-  authDomain:"moonshot-workshop.firebaseapp.com",
-  databaseURL:"https://moonshot-workshop-default-rtdb.firebaseio.com",
-  projectId:"moonshot-workshop",
-  storageBucket:"moonshot-workshop.firebasestorage.app",
-  messagingSenderId:"86329840069",
-  appId:"1:86329840069:web:bab30266b864c10594fbac"
+  apiKey:"AIzaSyD3Pbg9npycx3cCoAf5TTM2lI1zjZrmGHo",
+  authDomain:"moonshot-workshop-1c373.firebaseapp.com",
+  databaseURL:"https://moonshot-workshop-1c373-default-rtdb.firebaseio.com",
+  projectId:"moonshot-workshop-1c373",
+  storageBucket:"moonshot-workshop-1c373.firebasestorage.app",
+  messagingSenderId:"742317803259",
+  appId:"1:742317803259:web:5615071adc6957b90c125e"
 };
 
 const app = initializeApp(firebaseConfig);
 const db  = getDatabase(app);
+const auth = getAuth(app);
+// 익명 인증 완료 후 DB 리스너 부착 — auth != null 규칙에서 거부되지 않도록 게이팅
+let _dbListenersAttached = false;
+onAuthStateChanged(auth, user => {
+  if (user && !_dbListenersAttached) {
+    _dbListenersAttached = true;
+    onValue(ref(db,'ideas'),s=>{ideas=s.val()||{};_refresh();});
+    onValue(ref(db,'evals'),s=>{evals=s.val()||{};_refresh();});
+    onValue(ref(db,'clusters'),s=>{clusters=s.val()||null;_refresh();});
+    onValue(ref(db,'finalPresentations'),s=>{finalPresentations=s.val()||{};_refresh();});
+  }
+});
+signInAnonymously(auth).catch(e => console.warn('익명 인증 실패:', e.message));
 const PROXY_URL      = 'https://workshop-proxy.vercel.app/';
 const ADMIN_PASSWORD = 'admin1234';
 
@@ -129,10 +144,7 @@ const CRITERIA=[
   {key:'c4',label:'실행 속도',hint:'6개월 내 시장에 낼 수 있는가?'},
 ];
 
-onValue(ref(db,'ideas'),s=>{ideas=s.val()||{};_refresh();});
-onValue(ref(db,'evals'),s=>{evals=s.val()||{};_refresh();});
-onValue(ref(db,'clusters'),s=>{clusters=s.val()||null;_refresh();});
-onValue(ref(db,'finalPresentations'),s=>{finalPresentations=s.val()||{};_refresh();});
+// DB 리스너는 onAuthStateChanged 안에서 인증 후 부착됨 (위 코드 참고)
 
 function _refresh(){
   if(!currentUser)return;
